@@ -1,1 +1,2 @@
-print(3 * (4 + 2) * 5)
+var x = ((8 * 2) - (0.75 * 8))
+print("x is " + x + " which should be 10")

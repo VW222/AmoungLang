@@ -17,7 +17,8 @@ vector<Node*> shuntingYard(vector<Node*> stream) {
 	std::stack<Node*> operators;
 
 	for (auto o1 : stream) {
-		if (o1->type == Qualifiers::integer)
+		if (o1->type == Qualifiers::integer || o1->type == Qualifiers::floating
+			|| o1->type == Qualifiers::str || o1->type == Qualifiers::iden)
 			output.push(o1);
 		else if (o1->type == Qualifiers::oper) {
 			while (!operators.empty()) {
@@ -85,29 +86,27 @@ Tree parseStream(vector<Token> tokenStream, vector<string> operators) {
 		pushLine();
 
 	for (Node* expr : root->children) {
+		//expr->printSubTree(0);
 		if (expr->children[1]->value == "(") {
 			Node* func = expr->children[0];
+			expr->type = Qualifiers::functionCall;
 
 			expr->children.pop_back();
 			times(2, i)
 				expr->children.erase(expr->children.begin());
 
 			auto e = shuntingYard(expr->children);
-			//for (string v : e) {
-			//	cout << v << " ";
-			//}
-			//cout << "\n";
-
 			Node* exprSub = new Node(Qualifiers::expr, "expr");
 			std::stack<Node *> nodes;
 			for (auto v : e) {
-				if (v->type == Qualifiers::integer) {
+				if (v->type == Qualifiers::integer || v->type == Qualifiers::floating
+					|| v->type == Qualifiers::str || v->type == Qualifiers::iden) {
 					nodes.push(v);
 				}
 				else { // if its an operator
-					Node* left = nodes.top();
-					nodes.pop();
 					Node* right = nodes.top();
+					nodes.pop();
+					Node* left = nodes.top();
 					nodes.pop();
 					Node* op = new Node(Qualifiers::oper, v->value);
 					op->children.push_back(left);
@@ -120,6 +119,38 @@ Tree parseStream(vector<Token> tokenStream, vector<string> operators) {
 			expr->children.clear();
 			expr->children.push_back(func);
 			expr->children.push_back(nodes.top());
+		}
+		else if (expr->children[0]->type == Qualifiers::keyword) {
+			if (expr->children[0]->value == "var") {
+				expr->type = Qualifiers::variableDeclaration;
+				Node* keyw = expr->children[0], *ident = expr->children[1];
+				expr->children.erase(expr->children.begin(), expr->children.begin() + 3);
+
+				auto e = shuntingYard(expr->children);
+				Node* exprSub = new Node(Qualifiers::expr, "expr");
+				std::stack<Node*> nodes;
+				for (auto v : e) {
+					if (v->type == Qualifiers::integer || v->type == Qualifiers::floating
+						|| v->type == Qualifiers::str || v->type == Qualifiers::iden) {
+						nodes.push(v);
+					}
+					else { // if its an operator
+						Node* right = nodes.top();
+						nodes.pop();
+						Node* left = nodes.top();
+						nodes.pop();
+						Node* op = new Node(Qualifiers::oper, v->value);
+						op->children.push_back(left);
+						op->children.push_back(right);
+
+						nodes.push(op);
+					}
+				}
+				expr->children.clear();
+				expr->children.push_back(keyw);
+				expr->children.push_back(ident);
+				expr->children.push_back(nodes.top());
+			}
 		}
 	}
 

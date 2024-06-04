@@ -29,10 +29,24 @@ bool in(string c, vector<string> arr) {
 
 vector<string> split(string file, vector<char>& splitChars) {
     vector<string> result;
+    bool inString = false;
     string running = "";
+    bool wasString = false;
 
     for (char c : file) {
-        if (in(c, splitChars)) {
+        if (c == '"') {
+            if (!inString) {
+                running += '"';
+                inString = true;
+            }
+            else {
+                result.push_back(running);
+                //result.push_back(string(1, c));
+                running = "";
+                inString = false;
+            }
+        }
+        else if (!inString && in(c, splitChars)) {
             if (running.length() != 0) {
                 result.push_back(running);
                 result.push_back(string(1, c));
@@ -45,10 +59,13 @@ vector<string> split(string file, vector<char>& splitChars) {
             running += c;
     }
 
+    if (inString)
+        throw std::runtime_error("string not closed");
+
     if (running.length() != 0)
         result.push_back(running);
 
-    int t = result.size();
+    size_t t = result.size();
     for (int i = 0; i < t; i++) {
         if (result[i][0] == ' ') {
             result.erase(result.begin() + i);
@@ -59,12 +76,13 @@ vector<string> split(string file, vector<char>& splitChars) {
     return result;
 }
 
-vector<Token> lex(string& file, vector<char> splitChars, vector<string> operators) {
+vector<Token> lex(string& file, vector<char> splitChars, vector<string> operators, vector<string> keywords) {
     vector<Token> result;
     vector<string> stuff = split(file, splitChars);
 
-    std::regex renum("[0-9]*");
-    std::regex refloat("[0-9]*\\.[0-9]*");
+    // i used chatgpt for these. sorry not sorry.
+    std::regex renum("-?[0-9]+");
+    std::regex refloat("[+-]?([0-9]*[.])?[0-9]+([eE][-+]?\\d+)?");
     //std::regex reop("(=)");
 
     for (string s : stuff) {
@@ -80,12 +98,20 @@ vector<Token> lex(string& file, vector<char> splitChars, vector<string> operator
             id = Qualifiers::lParen;
         else if (s[0] == ')')
             id = Qualifiers::rParen;
+        else if (s[0] == '"') {
+            id = Qualifiers::str;
+            name = name.erase(0, 1);
+        }
         else if (in(s, operators))
             id = Qualifiers::oper;
         else if (std::regex_match(s, renum))
             id = Qualifiers::integer;
         else if (std::regex_match(s, refloat))
             id = Qualifiers::floating;
+        else {
+            if (in(name, keywords))
+                id = Qualifiers::keyword;
+        }
         result.push_back(Token(id, name));
     }
 

@@ -12,8 +12,12 @@ enum Qualifiers {
 	iden,
 	integer,
 	floating,
+	str,
+	keyword,
 	oper,
-	expr
+	expr,
+	functionCall,
+	variableDeclaration
 };
 
 class Node {
